@@ -1,24 +1,29 @@
 package main
 
 import (
+	"github.com/cjcjameson/pg_ctl"
 	"fmt"
 	"os"
-	"os/exec"
+	"strings"
 )
 
-func ScottLikesThisGPDBNode() (bool, error) {
-	return true, nil
+func DoesScottLikeThisGPDBNode(status pg_ctl.Status) (bool, error) {
+	fmt.Println(status.RawStdOut)
+	bigEnoughPid := status.Pid > 30000
+	isQuiescent := strings.Contains(status.PsPostgres, "quiescent")
+	return status.IsServerRunning && bigEnoughPid && isQuiescent, nil
 }
 
 func main() {
-	cmd := exec.Command("/usr/local/gpdb/bin/pg_ctl", "status", "-w", "-D",
-		"/Users/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0")
-	err := cmd.Run()
+	controller := pg_ctl.NewController("/Users/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0")
+
+	status, err := controller.Status()
 	if err != nil {
-		os.Exit(1)
+		fmt.Println(err)
+		os.Exit(status.ErrorCode)
 	}
 
-	nodeAppreciation, err := ScottLikesThisGPDBNode()
+	nodeAppreciation, err := DoesScottLikeThisGPDBNode(status)
 	if err != nil {
 		fmt.Println("Unable to determine Scott's preference")
 		fmt.Println(err)
